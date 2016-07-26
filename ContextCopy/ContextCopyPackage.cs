@@ -11,6 +11,9 @@ using Microsoft.VisualStudio.Shell;
 using EnvDTE80;
 using EnvDTE;
 using System.Windows.Forms;
+using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Package;
+using Microsoft.VisualStudio.TextManager.Interop;
 
 
 
@@ -98,6 +101,12 @@ namespace Dragonist.ContextCopy
             //IVsCodeWindow codeWindow = this.ServiceProvider.GetService(typeof(IVsCodeWindow));
             //codeWindow.service
 
+            // http://stackoverflow.com/questions/28321106/how-can-i-get-an-ivsdropdownbar-out-of-an-envdte-window
+            //IVsCodeWindow codeWindow = (IVsCodeWindow)Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SVsCodeWindow));
+            
+            //IVsCodeWindow codeWindow = (IVsCodeWindow)this.GetService(typeof(SVsCodeWindow));
+            //dte2.ActiveWindow.
+            
             ////IVsDropdownBarClient dbc;
             //string funName;
             ////ddb.GetClient(out dbc);
@@ -110,19 +119,62 @@ namespace Dragonist.ContextCopy
 
             //IWpfTextView wpfViewCurrent = AdaptersFactory.GetWpfTextView(textView);
             //ITextBuffer textCurrent = wpfViewCurrent.TextBuffer;
-
+            
             try // When there is no Document opened, do nothing
             {
                 Document objD = (Document)dte2.ActiveDocument.Object("Document");
                 if (null != objD)
                 {
+                    // Basic functionality section only file name and line number info
                     var fn = objD.Name;
                     TextDocument objTD = (TextDocument)dte2.ActiveDocument.Object("TextDocument");
                     TextPoint objTP = objTD.Selection.ActivePoint;
                     var sel = objTD.Selection;
                     var cl = objTP.Line;
-                    //var cl = sel.CurrentLine;
                     string text = sel.Text;
+                    string basicText = text + " [" + fn + ": " + cl + " ";
+                                        
+                    string funName = "";
+                    string className = "";                   
+                    
+                    EnvDTE.CodeClass codeClass = objTP.CodeElement[vsCMElement.vsCMElementClass] as EnvDTE.CodeClass;
+                    if (codeClass != null)
+                    {
+                        className = codeClass.Name;
+                        basicText += className + "::";
+                    }
+
+                    EnvDTE.CodeFunction codeFun = objTP.CodeElement[vsCMElement.vsCMElementFunction] as EnvDTE.CodeFunction;
+                    if (codeFun != null)
+                    {
+                        funName = codeFun.get_Prototype(8);
+                        basicText += funName;
+                    }
+
+                    basicText += "]";
+                    Clipboard.SetText(basicText);
+
+                    //codeFun.Prototype[vsCMPrototype.vsCMPrototypeClassName];
+                    //var className = codeFun.get_Prototype([vsCMPrototypeClassName]);
+
+                    //EnvDTE.CodeClass codeClass = objTP.CodeElement[vsCMElement.vsCMElementClass] as EnvDTE.CodeClass;
+
+                    //if (codeClass != null && codeFun != null)
+                    //{
+
+                    //}
+
+                    //var funName = codeFun.get_Prototype();
+                    
+                    //foreach (CodeParameter param in func.Parameters)
+                    //{
+                    //    TextPoint start = param.GetStartPoint(vsCMPart.vsCMPartWhole);
+                    //    TextPoint finish = param.GetEndPoint(vsCMPart.vsCMPartWhole);
+                    //    parms += start.CreateEditPoint().GetText(finish);
+                    //}
+                    //string funName = ce.FullName;
+                    //var cl = sel.CurrentLine;
+                    
 
                     //vsCMElement scopes = 0;
                     //foreach(vsCMElement scope in Enum.GetValues(scopes.GetType()))
@@ -130,15 +182,13 @@ namespace Dragonist.ContextCopy
                     //    ;
                     //}
                     //dte2.ActiveDocument.Collection.
-                    ProjectItem objPI = dte2.ActiveDocument.ProjectItem;
-
+                    //ProjectItem objPI = dte2.ActiveDocument.ProjectItem;
                     //string className = dte2.ActiveDocument.ProjectItem.FileCodeModel.CodeElementFromPoint(objTP, vsCMElement.vsCMElementModule).ToString();
                     //string funName = dte2.ActiveDocument.ProjectItem.FileCodeModel.CodeElementFromPoint(objTP, EnvDTE.vsCMElement.vsCMElementFunction).ToString();
                     //string funName = dte2.ActiveDocument.ProjectItem.FileCodeModel.CodeElementFromPoint(objTP, vsCMElement.vsCMElementFunctionInvokeStmt).ToString();
                     //dte2.ActiveDocument.
-                    string finalText = text + " [" + fn + ": " + cl + "]";
-
-                    Clipboard.SetText(finalText);
+                    //string finalText = text + " [" + fn + ": " + cl + ", "  + "]";
+                    //Clipboard.SetText(finalText);
                 }
             }
             catch
