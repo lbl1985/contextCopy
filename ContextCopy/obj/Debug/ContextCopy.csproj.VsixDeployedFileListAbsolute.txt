@@ -1,0 +1,4 @@
+C:\Users\bil\AppData\Local\Microsoft\VisualStudio\12.0Exp\Extensions\Dragonist\ContextCopy\1.0\\ContextCopy.dll
+C:\Users\bil\AppData\Local\Microsoft\VisualStudio\12.0Exp\Extensions\Dragonist\ContextCopy\1.0\\ContextCopy.pkgdef
+C:\Users\bil\AppData\Local\Microsoft\VisualStudio\12.0Exp\Extensions\Dragonist\ContextCopy\1.0\\extension.vsixmanifest
+C:\Users\bil\AppData\Local\Microsoft\VisualStudio\12.0Exp\Extensions\Dragonist\ContextCopy\1.0\\ContextCopy.pdb
