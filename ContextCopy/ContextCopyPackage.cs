@@ -50,6 +50,8 @@ namespace Dragonist.ContextCopy
         public ContextCopyPackage()
         {
             Debug.WriteLine(string.Format(CultureInfo.CurrentCulture, "Entering constructor for: {0}", this.ToString()));
+            this.m_iMode = 0;
+            this.m_bFirstHit = true;
         }
 
 
@@ -99,8 +101,80 @@ namespace Dragonist.ContextCopy
             bar.SetText(status);
             bar.FreezeOutput(1);
         }
+
+        // Mode 0: copied text [<filepath + filename>: <line#> <className>::<function signature>]
+        // Mode 1: copied text [<filename>:<line#> <className>::<function signature>]
+        // Mode 2: copied text [<filename>:<line#> <className>::<function name>]
+        // Mode 3: copied text [<filename>:<line#> <function name>]
+        // Mode 4: copied text [<filename>:<line#>]
+        private void getFilePathWithSignature(ref EnvDTE80.DTE2 dte2, ref Document objD, IVsStatusbar bar, int mode)
+        {
+            // if no document opened, return "";
+            if(objD == null)
+            {
+                return;
+            }
+
+            string fn = objD.Path + objD.Name;
+            if (mode != 0)
+            {
+                fn = objD.Name;
+            } 
+            
+            TextDocument objTD = (TextDocument)dte2.ActiveDocument.Object("TextDocument");
+            TextPoint objTP = objTD.Selection.ActivePoint;
+            var sel = objTD.Selection;
+            var cl = objTP.Line;
+            string text = sel.Text;
+            string basicText = text + " [" + fn + ": " + cl + " ";
+
+            string funName = "";
+            string className = "";
+
+            EnvDTE.CodeClass codeClass = objTP.CodeElement[vsCMElement.vsCMElementClass] as EnvDTE.CodeClass;
+            if (codeClass != null && mode < 3)
+            {
+                className = codeClass.Name;
+                basicText += className + "::";
+            }
+
+            EnvDTE.CodeFunction codeFun = objTP.CodeElement[vsCMElement.vsCMElementFunction] as EnvDTE.CodeFunction;
+            if (codeFun != null)
+            {
+                if(mode == 0 || mode == 1)
+                {
+                    funName = codeFun.get_Prototype(8);
+                } else if (mode == 2 || mode == 3)
+                {
+                    funName = codeFun.Name;
+                }                
+                basicText += funName;
+            }
+
+            basicText += "]";
+
+            updateStatusBar(bar, "Mode:" + this.m_iMode.ToString() + " " + basicText);
+            Clipboard.SetText(basicText);
+        }
         private void MenuItemCallback(object sender, EventArgs e)
         {
+            if(this.m_bFirstHit)
+            {
+                this.m_dtLastHit = System.DateTime.UtcNow;
+                this.m_bFirstHit = false;
+            } else
+            {
+                DateTime now = System.DateTime.UtcNow;
+                var deltaSecond = now.Subtract(this.m_dtLastHit).TotalMilliseconds/1000;
+                
+                if (deltaSecond < 2.5)
+                {
+                    this.m_iMode = (this.m_iMode + 1) % 5;
+                }
+
+                this.m_dtLastHit = now;
+            }
+
             var dte2 = (EnvDTE80.DTE2)Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SDTE));
             IVsStatusbar statusBar = (IVsStatusbar)GetService(typeof(SVsStatusbar));
 
@@ -110,35 +184,7 @@ namespace Dragonist.ContextCopy
                 if (null != objD)
                 {
                     // Basic functionality section only file name and line number info
-                    var fn = objD.Name;
-                    TextDocument objTD = (TextDocument)dte2.ActiveDocument.Object("TextDocument");
-                    TextPoint objTP = objTD.Selection.ActivePoint;
-                    var sel = objTD.Selection;
-                    var cl = objTP.Line;
-                    string text = sel.Text;
-                    string basicText = text + " [" + fn + ": " + cl + " ";
-                                        
-                    string funName = "";
-                    string className = "";                   
-                    
-                    EnvDTE.CodeClass codeClass = objTP.CodeElement[vsCMElement.vsCMElementClass] as EnvDTE.CodeClass;
-                    if (codeClass != null)
-                    {
-                        className = codeClass.Name;
-                        basicText += className + "::";
-                    }
-
-                    EnvDTE.CodeFunction codeFun = objTP.CodeElement[vsCMElement.vsCMElementFunction] as EnvDTE.CodeFunction;
-                    if (codeFun != null)
-                    {
-                        funName = codeFun.get_Prototype(8);
-                        basicText += funName;
-                    }
-
-                    basicText += "]";
-
-                    updateStatusBar(statusBar, basicText);
-                    Clipboard.SetText(basicText);
+                    getFilePathWithSignature(ref dte2, ref objD, statusBar, this.m_iMode);
 
                     //codeFun.Prototype[vsCMPrototype.vsCMPrototypeClassName];
                     //var className = codeFun.get_Prototype([vsCMPrototypeClassName]);
@@ -181,6 +227,9 @@ namespace Dragonist.ContextCopy
             {
             }
         }
+        private int m_iMode;
+        private DateTime m_dtLastHit;
+        private bool m_bFirstHit;
 
     }
 }
