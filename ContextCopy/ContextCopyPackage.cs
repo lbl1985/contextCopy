@@ -84,42 +84,26 @@ namespace Dragonist.ContextCopy
         /// See the Initialize method to see how the menu item is associated to this function using
         /// the OleMenuCommandService service and the MenuCommand class.
         /// </summary>
+        /// 
+
+        private void updateStatusBar(IVsStatusbar bar, string status)
+        {
+            int freeze;
+            bar.IsFrozen(out freeze);
+
+            if (freeze != 0)
+            {
+                bar.FreezeOutput(0);
+            }
+            
+            bar.SetText(status);
+            bar.FreezeOutput(1);
+        }
         private void MenuItemCallback(object sender, EventArgs e)
         {
             var dte2 = (EnvDTE80.DTE2)Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SDTE));
-            //IVsWindowFrame wf = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SVsWindowFrame)) as IVsWindowFrame;
-            //IVsTextView view = this.ServiceProvider.GetService(typeof(SVsOutputWindow)) as IVsTextView;
-            //IVsWindowFrame wf = this.ServiceProvider.GetService(typeof(SVsWindowFrame)) as IVsWindowFrame;
-            //IntPtr pDBM;
-            //Guid riid = typeof(IVsDropdownBarManager).GUID;
-            //wf.QueryViewInterface(ref riid, out pDBM);
-            //IVsDropdownBarManager dropdownBarManager = (IVsDropdownBarManager)Marshal.GetObjectForIUnknown(pDBM);
+            IVsStatusbar statusBar = (IVsStatusbar)GetService(typeof(SVsStatusbar));
 
-            //var txtMgr = (IVsTextManager)ServiceProvider.GetService(typeof(SVsTextManager));
-            //txtMgr.
-            //IVsDropdownBarClient dbc = (IVsDropdownBarClient)ServiceProvider.GetService(typeof(IVsDropdownBarClient));
-            //IVsCodeWindow codeWindow = this.ServiceProvider.GetService(typeof(IVsCodeWindow));
-            //codeWindow.service
-
-            // http://stackoverflow.com/questions/28321106/how-can-i-get-an-ivsdropdownbar-out-of-an-envdte-window
-            //IVsCodeWindow codeWindow = (IVsCodeWindow)Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SVsCodeWindow));
-            
-            //IVsCodeWindow codeWindow = (IVsCodeWindow)this.GetService(typeof(SVsCodeWindow));
-            //dte2.ActiveWindow.
-            
-            ////IVsDropdownBarClient dbc;
-            //string funName;
-            ////ddb.GetClient(out dbc);
-            //dbc.GetEntryText(1, 0, out funName);
-
-            //IVsTextView textView;
-            //txtMgr.GetActiveView(1, null, out textView);
-            //IVsEnumGUID currentLanGUID;
-            //txtMgr.EnumLanguageServices(out currentLanGUID);
-
-            //IWpfTextView wpfViewCurrent = AdaptersFactory.GetWpfTextView(textView);
-            //ITextBuffer textCurrent = wpfViewCurrent.TextBuffer;
-            
             try // When there is no Document opened, do nothing
             {
                 Document objD = (Document)dte2.ActiveDocument.Object("Document");
@@ -152,6 +136,8 @@ namespace Dragonist.ContextCopy
                     }
 
                     basicText += "]";
+
+                    updateStatusBar(statusBar, basicText);
                     Clipboard.SetText(basicText);
 
                     //codeFun.Prototype[vsCMPrototype.vsCMPrototypeClassName];

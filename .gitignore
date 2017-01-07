@@ -1,2 +1,5 @@
 ContextCopy/bin/
 ContextCopy/obj/
+.vs/
+Backup/
+UpgradeLog*
