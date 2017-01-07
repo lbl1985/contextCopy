@@ -107,7 +107,7 @@ namespace Dragonist.ContextCopy
         // Mode 2: copied text [<filename>:<line#> <className>::<function name>]
         // Mode 3: copied text [<filename>:<line#> <function name>]
         // Mode 4: copied text [<filename>:<line#>]
-        private void getFilePathWithSignature(ref EnvDTE80.DTE2 dte2, ref Document objD, IVsStatusbar bar, int mode)
+        private void getContext(ref EnvDTE80.DTE2 dte2, ref Document objD, IVsStatusbar bar, int mode)
         {
             // if no document opened, return "";
             if(objD == null)
@@ -156,17 +156,19 @@ namespace Dragonist.ContextCopy
             updateStatusBar(bar, "Mode:" + this.m_iMode.ToString() + " " + basicText);
             Clipboard.SetText(basicText);
         }
-        private void MenuItemCallback(object sender, EventArgs e)
+
+        private void updateTimeMode()
         {
-            if(this.m_bFirstHit)
+            if (this.m_bFirstHit)
             {
                 this.m_dtLastHit = System.DateTime.UtcNow;
                 this.m_bFirstHit = false;
-            } else
+            }
+            else
             {
                 DateTime now = System.DateTime.UtcNow;
-                var deltaSecond = now.Subtract(this.m_dtLastHit).TotalMilliseconds/1000;
-                
+                var deltaSecond = now.Subtract(this.m_dtLastHit).TotalMilliseconds / 1000;
+
                 if (deltaSecond < 2.5)
                 {
                     this.m_iMode = (this.m_iMode + 1) % 5;
@@ -174,6 +176,10 @@ namespace Dragonist.ContextCopy
 
                 this.m_dtLastHit = now;
             }
+        }
+        private void MenuItemCallback(object sender, EventArgs e)
+        {
+            updateTimeMode();
 
             var dte2 = (EnvDTE80.DTE2)Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(SDTE));
             IVsStatusbar statusBar = (IVsStatusbar)GetService(typeof(SVsStatusbar));
@@ -183,44 +189,8 @@ namespace Dragonist.ContextCopy
                 Document objD = (Document)dte2.ActiveDocument.Object("Document");
                 if (null != objD)
                 {
-                    // Basic functionality section only file name and line number info
-                    getFilePathWithSignature(ref dte2, ref objD, statusBar, this.m_iMode);
-
-                    //codeFun.Prototype[vsCMPrototype.vsCMPrototypeClassName];
-                    //var className = codeFun.get_Prototype([vsCMPrototypeClassName]);
-
-                    //EnvDTE.CodeClass codeClass = objTP.CodeElement[vsCMElement.vsCMElementClass] as EnvDTE.CodeClass;
-
-                    //if (codeClass != null && codeFun != null)
-                    //{
-
-                    //}
-
-                    //var funName = codeFun.get_Prototype();
-                    
-                    //foreach (CodeParameter param in func.Parameters)
-                    //{
-                    //    TextPoint start = param.GetStartPoint(vsCMPart.vsCMPartWhole);
-                    //    TextPoint finish = param.GetEndPoint(vsCMPart.vsCMPartWhole);
-                    //    parms += start.CreateEditPoint().GetText(finish);
-                    //}
-                    //string funName = ce.FullName;
-                    //var cl = sel.CurrentLine;
-                    
-
-                    //vsCMElement scopes = 0;
-                    //foreach(vsCMElement scope in Enum.GetValues(scopes.GetType()))
-                    //{
-                    //    ;
-                    //}
-                    //dte2.ActiveDocument.Collection.
-                    //ProjectItem objPI = dte2.ActiveDocument.ProjectItem;
-                    //string className = dte2.ActiveDocument.ProjectItem.FileCodeModel.CodeElementFromPoint(objTP, vsCMElement.vsCMElementModule).ToString();
-                    //string funName = dte2.ActiveDocument.ProjectItem.FileCodeModel.CodeElementFromPoint(objTP, EnvDTE.vsCMElement.vsCMElementFunction).ToString();
-                    //string funName = dte2.ActiveDocument.ProjectItem.FileCodeModel.CodeElementFromPoint(objTP, vsCMElement.vsCMElementFunctionInvokeStmt).ToString();
-                    //dte2.ActiveDocument.
-                    //string finalText = text + " [" + fn + ": " + cl + ", "  + "]";
-                    //Clipboard.SetText(finalText);
+                    // get Context, based on mode to get differnt context info
+                    getContext(ref dte2, ref objD, statusBar, this.m_iMode);
                 }
             }
             catch
