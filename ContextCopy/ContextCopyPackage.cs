@@ -115,7 +115,7 @@ namespace Dragonist.ContextCopy
                 return;
             }
 
-            string fn = objD.Path + objD.Name;
+            string fn = "file:///" + objD.Path + objD.Name + " ";
             if (mode != 0)
             {
                 fn = objD.Name;
@@ -126,7 +126,7 @@ namespace Dragonist.ContextCopy
             var sel = objTD.Selection;
             var cl = objTP.Line;
             string text = sel.Text;
-            string basicText = text + " [" + fn + ": " + cl + " ";
+            string basicText = text + " [" + fn + ":" + cl + " ";
 
             string funName = "";
             string className = "";
