@@ -11,11 +11,12 @@ using Microsoft.VisualStudio.Shell;
 using EnvDTE80;
 using EnvDTE;
 using System.Windows.Forms;
+using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.TextManager.Interop;
-
-
+using Microsoft.VisualStudio.Text.Formatting;
 
 namespace Dragonist.ContextCopy
 {
@@ -102,6 +103,36 @@ namespace Dragonist.ContextCopy
             bar.FreezeOutput(1);
         }
 
+        /// <summary>
+        /// Returns an IVsTextView for the given file path, if the given file is open in Visual Studio.
+        /// </summary>
+        /// <param name="filePath">Full Path of the file you are looking for.</param>
+        /// <returns>The IVsTextView for this file, if it is open, null otherwise.</returns>
+        
+        //internal static Microsoft.VisualStudio.TextManager.Interop.IVsTextView GetIVsTextView(string filePath)
+        //{
+
+        //    var dte2 = (EnvDTE80.DTE2)Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(Microsoft.VisualStudio.Shell.Interop.SDTE));
+        //    Microsoft.VisualStudio.OLE.Interop.IServiceProvider sp = (Microsoft.VisualStudio.OLE.Interop.IServiceProvider)dte2;
+        //    Microsoft.VisualStudio.Shell.ServiceProvider serviceProvider = new Microsoft.VisualStudio.Shell.ServiceProvider(sp);
+
+        //    Microsoft.VisualStudio.Shell.Interop.IVsUIHierarchy uiHierarchy;
+        //    uint itemID;
+        //    Microsoft.VisualStudio.Shell.Interop.IVsWindowFrame windowFrame;
+        //    Microsoft.VisualStudio.Text.Editor.IWpfTextView wpfTextView = null;
+        //    if (Microsoft.VisualStudio.Shell.VsShellUtilities.IsDocumentOpen(serviceProvider, filePath, Guid.Empty,
+        //                                    out uiHierarchy, out itemID, out windowFrame))
+        //    {
+        //        // Get the IVsTextView from the windowFrame.
+        //        IVsTextView tmpTextView = VsShellUtilities.GetTextView(windowFrame);
+        //        wpfTextView =  .GetWpfTextView()
+        //        return Microsoft.VisualStudio.Shell.VsShellUtilities.GetTextView(windowFrame);
+
+        //    }
+
+        //    return null;
+        //}
+
         // Mode 0: copied text [<filepath + filename>: <line#> <className>::<function signature>]
         // Mode 1: copied text [<filename>:<line#> <className>::<function signature>]
         // Mode 2: copied text [<filename>:<line#> <className>::<function name>]
@@ -119,13 +150,24 @@ namespace Dragonist.ContextCopy
             if (mode != 0)
             {
                 fn = objD.Name;
-            } 
-            
+            }
+
+            var componentModel = (IComponentModel)GetService(typeof(SComponentModel));
+            var textManager = (IVsTextManager)Package.GetGlobalService(typeof(SVsTextManager));
+            IVsTextView activeView = null;
+            ErrorHandler.ThrowOnFailure(textManager.GetActiveView(1, null, out activeView));
+            var editorAdapter = componentModel.GetService<IVsEditorAdaptersFactoryService>();
+            IWpfTextView wpfTextView = editorAdapter.GetWpfTextView(activeView);
+            //wpfTextView.Selection.SelectedSpans;
+            IRtfBuilderService _rtfBuilderService = componentModel.GetService<IRtfBuilderService>();
+            _rtfBuilderService.GenerateRtf(wpfTextView.Selection.SelectedSpans, wpfTextView);
+
             TextDocument objTD = (TextDocument)dte2.ActiveDocument.Object("TextDocument");
             TextPoint objTP = objTD.Selection.ActivePoint;
             var sel = objTD.Selection;
             var cl = objTP.Line;
-            string text = sel.Text;
+            //string bar_text = sel.Text;
+            string text = _rtfBuilderService.GenerateRtf(wpfTextView.Selection.SelectedSpans, wpfTextView);
             string basicText = text + " [" + fn + ":" + cl + " ";
 
             string funName = "";
@@ -154,7 +196,15 @@ namespace Dragonist.ContextCopy
             basicText += "]";
 
             updateStatusBar(bar, "Mode:" + this.m_iMode.ToString() + " " + basicText);
-            Clipboard.SetText(basicText);
+
+            DataObject data = new DataObject();
+            data.SetText(text, TextDataFormat.Rtf);
+            Clipboard.SetDataObject(data, false);
+
+            //data.SetText(text, TextDataFormat.Rtf);
+            //Clipboard.SetData(DataFormats.Rtf, data);
+            //Clipboard.SetDataObject(data, false);
+            //Clipboard.SetText(basicText);
         }
 
         private void updateTimeMode()
@@ -200,6 +250,7 @@ namespace Dragonist.ContextCopy
         private int m_iMode;
         private DateTime m_dtLastHit;
         private bool m_bFirstHit;
-
+        //[Import]
+        private IRtfBuilderService rtfBuilderService { get; set; }
     }
 }
